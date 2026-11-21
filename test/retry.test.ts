@@ -92,7 +92,7 @@ describe("retries and the failed set", () => {
     const id = await enqueueThumbnail(q, { ...rig.settings, attempts: 1 }, file, spec);
     await waitFor(async () => (await q.getFailedCount()) === 1);
     const job = await q.getJob(id);
-    expect(job?.stacktrace.join("\n")).toContain("boom");
+    expect(job?.stacktrace?.join("\n")).toContain("boom");
   });
 
   it("fails a corrupt image through the real processor and keeps sharp's message", async () => {

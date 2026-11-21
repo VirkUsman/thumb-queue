@@ -83,12 +83,25 @@ describe("concurrency", () => {
   });
 });
 
+function countIn(starts: number[], from: number, to: number): number {
+  return starts.filter((t) => t >= from && t < to).length;
+}
+
+function worstSliding(starts: number[], windowMs: number): number {
+  let worst = 0;
+  for (const s of starts) worst = Math.max(worst, countIn(starts, s, s + windowMs));
+  return worst;
+}
+
+// bullmq counts jobs in fixed windows that start at the first job, so the
+// guarantee is 10 in the first second and, at worst, 10 at the end of one
+// window plus 10 at the start of the next in any sliding second.
 describe("rate limit", () => {
   beforeEach(async () => {
     rig = await makeRig({ concurrency: 8, rateMax: 10, rateWindowMs: 1000 });
   });
 
-  it("starts at most 10 jobs in any one second window", async () => {
+  it("starts at most 10 jobs in the first second, and at most 20 in any second", async () => {
     const starts: number[] = [];
     workers.push(
       createThumbWorker(rig.settings, async () => {
@@ -101,13 +114,25 @@ describe("rate limit", () => {
     await waitFor(async () => (await rig.queue().getCompletedCount()) === 35, 20000);
     const elapsed = Date.now() - t0;
     starts.sort((a, b) => a - b);
-    let worst = 0;
-    for (let i = 0; i < starts.length; i++) {
-      const inWindow = starts.filter((t) => t >= starts[i]! && t < starts[i]! + 1000).length;
-      worst = Math.max(worst, inWindow);
-    }
-    expect(worst).toBeLessThanOrEqual(10);
-    // 35 jobs at 10 a second cannot finish in under three windows
+    expect(countIn(starts, starts[0]!, starts[0]! + 1000)).toBeLessThanOrEqual(10);
+    expect(worstSliding(starts, 1000)).toBeLessThanOrEqual(20);
+    // 35 jobs at 10 a window need four windows, so at least three full waits
     expect(elapsed).toBeGreaterThanOrEqual(2900);
+  });
+
+  it("is a total across workers, not per worker", async () => {
+    const starts: number[] = [];
+    const handler = async () => {
+      starts.push(Date.now());
+      return fakeOutcome;
+    };
+    workers.push(createThumbWorker(rig.settings, handler), createThumbWorker(rig.settings, handler));
+    const t0 = Date.now();
+    await addMany(25);
+    await waitFor(async () => (await rig.queue().getCompletedCount()) === 25, 20000);
+    const elapsed = Date.now() - t0;
+    starts.sort((a, b) => a - b);
+    expect(countIn(starts, starts[0]!, starts[0]! + 1000)).toBeLessThanOrEqual(10);
+    expect(elapsed).toBeGreaterThanOrEqual(1900);
   });
 });
