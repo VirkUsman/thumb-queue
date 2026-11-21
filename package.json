@@ -1,0 +1,31 @@
+{
+  "name": "thumb-queue",
+  "version": "0.1.0",
+  "description": "A BullMQ worker that turns uploaded images into thumbnails, with retries, one-output idempotency and a clean shutdown",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src test bench",
+    "test": "vitest run",
+    "bench": "node --experimental-strip-types bench/throughput.ts"
+  },
+  "dependencies": {
+    "bullmq": "^6.7.8",
+    "ioredis": "^6.0.0",
+    "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.6",
+    "eslint": "^10.15.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.73.0",
+    "vitest": "^5.1.1"
+  }
+}
