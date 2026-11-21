@@ -45,7 +45,7 @@ bench/             throughput script
 | After the last attempt the job sits in the failed set with its reason | `listFailed` returns the id, the attempt count and the exact error text, and the stack trace is still on the job |
 | The same upload gives one output | 20 concurrent enqueues make one job. Ten enqueues across two workers run the handler once and leave one file |
 | SIGTERM drains | A child process with a 1.5 s job in flight gets SIGTERM. It exits 0 after the job finishes, and the two jobs behind it are still waiting |
-| A killed worker's job is finished by another worker | The child is `kill -9`'d while the job is active. A second worker with a 1 s lock picks it up when the lock expires, runs it once, and the job's stalled counter is 1 |
+| A killed worker's job is finished by another worker | The child is `kill -9`'d while the job is active. A second worker with a 1 s lock picks it up when the lock expires, runs it once, and the job's stalled counter is at least 1 |
 
 Concurrency and rate are checked under load with 60 to 100 jobs and a fake
 handler: the peak number in flight equals the configured 5 and never goes
@@ -117,7 +117,7 @@ first and stops the run with one line.
 - Output files are never deleted. Nothing here expires a thumbnail.
 - A job killed twice by stalls is failed by BullMQ's `maxStalledCount` default
   of 1. I did not change it and did not test the second kill.
-- Tested on macOS with Redis from Homebrew, and in CI on Linux with Redis 7.
+- Tested on macOS with Redis from Homebrew. The CI workflow uses Redis 7 on Linux and has not run yet.
   Not tried with Redis Cluster.
 
 MIT licence.
