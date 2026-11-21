@@ -96,6 +96,13 @@ function worstSliding(starts: number[], windowMs: number): number {
 // bullmq counts jobs in fixed windows that start at the first job, so the
 // guarantee is 10 in the first second and, at worst, 10 at the end of one
 // window plus 10 at the start of the next in any sliding second.
+// The limiter's window opens when the first job is taken from Redis, a few ms
+// before the handler records its start. Job 11 starts the next window, which
+// can land just under 1000 ms after starts[0] as recorded here. CI saw 11 that
+// way. Count the first 900 ms: still 10 at most, and 20 if the limit were per
+// worker.
+const FIRST_WINDOW_MS = 900;
+
 describe("rate limit", () => {
   beforeEach(async () => {
     rig = await makeRig({ concurrency: 8, rateMax: 10, rateWindowMs: 1000 });
@@ -114,7 +121,7 @@ describe("rate limit", () => {
     await waitFor(async () => (await rig.queue().getCompletedCount()) === 35, 20000);
     const elapsed = Date.now() - t0;
     starts.sort((a, b) => a - b);
-    expect(countIn(starts, starts[0]!, starts[0]! + 1000)).toBeLessThanOrEqual(10);
+    expect(countIn(starts, starts[0]!, starts[0]! + FIRST_WINDOW_MS)).toBeLessThanOrEqual(10);
     expect(worstSliding(starts, 1000)).toBeLessThanOrEqual(20);
     // 35 jobs at 10 a window need four windows, so at least three full waits
     expect(elapsed).toBeGreaterThanOrEqual(2900);
@@ -132,7 +139,7 @@ describe("rate limit", () => {
     await waitFor(async () => (await rig.queue().getCompletedCount()) === 25, 20000);
     const elapsed = Date.now() - t0;
     starts.sort((a, b) => a - b);
-    expect(countIn(starts, starts[0]!, starts[0]! + 1000)).toBeLessThanOrEqual(10);
+    expect(countIn(starts, starts[0]!, starts[0]! + FIRST_WINDOW_MS)).toBeLessThanOrEqual(10);
     expect(elapsed).toBeGreaterThanOrEqual(1900);
   });
 });

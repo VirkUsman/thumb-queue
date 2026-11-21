@@ -92,7 +92,7 @@ they clean up what they create. `npm run build` compiles to `dist/`.
 | `THUMB_LOCK_MS`, `THUMB_STALLED_MS` | 30000, 30000 | how long a dead worker holds a job |
 | `THUMB_SLOW_MS` | 0 | sleep before each job, used by the shutdown and stall tests |
 
-## Two things that went wrong on the way
+## Three things that went wrong on the way
 
 **The rate limit test assumed the wrong window.** It asserted that no sliding
 second held more than 10 starts and failed with 20. BullMQ counts in fixed
@@ -105,6 +105,12 @@ this limiter is not it.
 **Tests hung when Redis was down.** With nothing on the port, ioredis retried
 forever and every test ran into its timeout. A global setup now pings Redis
 first and stops the run with one line.
+
+**The first CI run counted 11 in the first second.** Locally it always counted
+10. The window opens when the first job leaves Redis, a few milliseconds before
+the handler writes down its start time, so job 11, correctly in the second
+window, landed just under 1000 ms after the recorded first start. The tests now
+count the first 900 ms. A limit applied per worker would still show 20 there.
 
 ## What I would not rely on yet
 
