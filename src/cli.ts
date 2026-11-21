@@ -1,3 +1,4 @@
+import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { loadSettings } from "./config.ts";
 import { createQueue, enqueueThumbnail, listFailed } from "./queue.ts";
@@ -62,7 +63,7 @@ async function main(): Promise<void> {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((err: unknown) => {
     console.error(String(err instanceof Error ? err.message : err));
     process.exit(1);
